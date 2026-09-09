@@ -1,0 +1,15 @@
+[Unit]
+Description=Telegram Bot MAN 1 Jember
+After=network.target
+
+[Service]
+Type=simple
+User=angger
+WorkingDirectory=/home/angger/majesatelegrambot
+EnvironmentFile=/home/angger/majesatelegrambot/.env
+ExecStart=/home/angger/majesatelegrambot/venv/bin/python3 bot.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
