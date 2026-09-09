@@ -2,6 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from services.gukar_scraper import get_gukar_category, get_gukar_sections
+from services.page_scraper import get_rendered_page_text
 from services.wordpress_api import get_page
 from utils.formatter import truncate
 from utils.menu import build_gukar_keyboard, build_menu, build_profil_keyboard
@@ -28,7 +29,11 @@ async def _show_profil(update: Update, context: ContextTypes.DEFAULT_TYPE, slug:
         await _send_photo(update, context, image, caption)
         return
 
-    text = f"🏫 <b>{label}</b>\n\n{truncate(page['content'], 3800)}"
+    content = page["content"]
+    if not content:
+        content = await get_rendered_page_text(page["link"])
+
+    text = f"🏫 <b>{label}</b>\n\n{truncate(content, 3800) if content else '❌ Data tidak ditemukan.'}"
     markup = build_profil_keyboard() if back else build_menu()
     await _edit_or_send(update, context, text, markup)
 
