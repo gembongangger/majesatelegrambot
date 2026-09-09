@@ -20,6 +20,8 @@ apt install -y python3 python3-venv python3-pip git
 echo "==> 2/5 Clone repo (jika belum ada)"
 if [[ ! -d "$APP_DIR/.git" ]]; then
     git clone https://github.com/gembongangger/majesatelegrambot.git "$APP_DIR"
+else
+    git -C "$APP_DIR" pull
 fi
 
 echo "==> 3/5 Setup venv & install Python dependencies"
@@ -44,7 +46,7 @@ else
 fi
 
 echo "==> 5/5 Pasang systemd service"
-cp "$APP_DIR/majes-bot.service" "$SERVICE_FILE"
+cp "$APP_DIR/majesa-bot.service" "$SERVICE_FILE"
 
 systemctl daemon-reload
 systemctl enable "$SERVICE_NAME"

@@ -16,17 +16,43 @@ async def profil_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def _show_profil(update: Update, context: ContextTypes.DEFAULT_TYPE, slug: str, label: str, back: bool = True) -> None:
     page = await get_page(slug)
-    text = f"🏫 <b>{label}</b>\n\n{truncate(page['content'], 3800)}" if page else "❌ Data tidak ditemukan."
+    if not page:
+        text = f"🏫 <b>{label}</b>\n\n❌ Data tidak ditemukan."
+        markup = build_profil_keyboard() if back else build_menu()
+        await _edit_or_send(update, context, text, markup)
+        return
+
+    image = page.get("image")
+    caption = f"🏫 <b>{label}</b>" if not page["content"] else f"🏫 <b>{label}</b>\n\n{truncate(page['content'], 1000)}"
+    if image:
+        await _send_photo(update, context, image, caption)
+        return
+
+    text = f"🏫 <b>{label}</b>\n\n{truncate(page['content'], 3800)}"
     markup = build_profil_keyboard() if back else build_menu()
+    await _edit_or_send(update, context, text, markup)
+
+
+async def _edit_or_send(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str, markup) -> None:
     query = update.callback_query
     if query:
-        await query.answer()
         try:
             await query.message.edit_text(text, parse_mode="HTML", disable_web_page_preview=True, reply_markup=markup)
             return
         except Exception:
             pass
     await context.bot.send_message(update.effective_chat.id, text, parse_mode="HTML", disable_web_page_preview=True, reply_markup=markup)
+
+
+async def _send_photo(update: Update, context: ContextTypes.DEFAULT_TYPE, image_url: str, caption: str) -> None:
+    query = update.callback_query
+    if query:
+        try:
+            await query.message.reply_photo(photo=image_url, caption=caption, parse_mode="HTML")
+            return
+        except Exception:
+            pass
+    await context.bot.send_photo(update.effective_chat.id, photo=image_url, caption=caption, parse_mode="HTML")
 
 
 async def profil_visi_misi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

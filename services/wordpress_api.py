@@ -105,7 +105,20 @@ async def get_page(slug: str):
         "content": _clean_page_content(page["content"]["rendered"]),
         "link": page["link"],
         "downloads": _extract_downloads(page["content"]["rendered"]),
+        "image": _extract_first_image(page["content"]["rendered"]),
     }
+
+
+def _extract_first_image(raw_html: str) -> str | None:
+    m = re.search(r'<img[^>]+src="([^"]+)"', raw_html)
+    if not m:
+        return None
+    url = html.unescape(m.group(1))
+    if url.startswith("//"):
+        return "https:" + url
+    if url.startswith("http://"):
+        return "https://" + url[len("http://"):]
+    return url if url.startswith("https://") else None
 
 
 def _clean_page_content(raw_html: str) -> str:
