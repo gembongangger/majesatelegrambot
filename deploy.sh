@@ -41,8 +41,33 @@ if [[ ! -f "$APP_DIR/.env" ]]; then
     echo "⚠️  Isi token di: $APP_DIR/.env  lalu jalankan deploy lagi."
     echo "    nano $APP_DIR/.env"
     exit 1
-else
-    echo "    .env sudah ada."
+fi
+echo "    .env sudah ada. Melengkapi variabel yang belum ada..."
+
+append_env() {
+    local key="$1" val="$2"
+    if ! grep -q "^${key}=" "$APP_DIR/.env"; then
+        echo "${key}=${val}" >> "$APP_DIR/.env"
+        echo "    + ${key}=${val}"
+    else
+        echo "    ≈ ${key} sudah ada (dibiarkan)"
+    fi
+}
+
+append_env NEWS_POLL_INTERVAL_MINUTES    "30"
+append_env MIKROTIK_IP                   "192.168.89.2"
+append_env MIKROTIK_USER                 "angger"
+append_env MIKROTIK_PASS                 "ganti_ini"
+append_env MIKROTIK_USE_SSH              "0"
+append_env MIKROTIK_API_PORT             "8728"
+append_env VOUCHER_LIMIT_UPTIME_MIN      "90"
+append_env VOUCHER_CUSTOMER              "hasyim"
+append_env VOUCHER_TEMPLATE              "aa"
+append_env ADMIN_IDS                     "539484757"
+
+if grep -q "^MIKROTIK_PASS=ganti_ini$" "$APP_DIR/.env"; then
+    echo "⚠️  MIKROTIK_PASS masih 'ganti_ini'. Isi password asli dulu:"
+    echo "    nano $APP_DIR/.env   lalu jalankan: sudo systemctl restart majesa-bot"
 fi
 
 echo "==> 5/5 Pasang systemd service"
