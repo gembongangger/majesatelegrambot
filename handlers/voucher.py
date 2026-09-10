@@ -13,7 +13,15 @@ from config import (
     VOUCHER_PASS_MIN_LEN,
     VOUCHER_PASS_PATTERN,
 )
-from services.mikrotik import MikroTikError, create_voucher, list_vouchers, remove_voucher, set_disabled, router_name
+from services.mikrotik import (
+    MikroTikError,
+    create_voucher,
+    list_vouchers,
+    remove_voucher,
+    set_disabled,
+    router_name,
+    template_ready,
+)
 from services.admin_registry import is_admin
 
 from utils.menu import build_menu
@@ -49,12 +57,28 @@ async def voucher_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     name = args[2] if len(args) > 2 else None
 
     try:
+        if sub == "cek":
+            ok, msg = template_ready()
+            await update.message.reply_text(
+                ("✅ " + msg if ok else "⚠️ " + msg),
+                parse_mode="HTML",
+            )
+            return
+
         if sub == "list":
+            tpl_ok, tpl_msg = template_ready()
             users = list_vouchers()
-            if not users:
+            if not users and tpl_ok:
                 await update.message.reply_text("📭 Belum ada voucher (prefix MAJ).")
                 return
-            lines = [f"📡 <b>VOUCHER WIFI</b> ({len(users)})", ""]
+            lines = []
+            if not tpl_ok:
+                lines.append(f"⚠️ <b>CEK TEMPLATE DULU:</b>\n{tpl_msg}\n\n---")
+            if tpl_ok and not users:
+                await update.message.reply_text("📭 Belum ada voucher (prefix MAJ).")
+                return
+            lines.append(f"📡 <b>VOUCHER WIFI</b> ({len(users)})")
+            lines.append("")
             for u in users:
                 status = "🔴 nonaktif" if u["disabled"] else "🟢 aktif"
                 prof = u["profile"] or "-"

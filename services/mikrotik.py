@@ -72,6 +72,24 @@ def _find_by_username(users: list[dict], username: str):
     )
 
 
+def template_ready() -> tuple[bool, str]:
+    with _api() as api:
+        try:
+            t = _find_by_username(api.get_resource(_UM_USER).get(), VOUCHER_TEMPLATE)
+        except Exception as exc:
+            raise MikroTikError(f"Gagal memeriksa template: {exc}")
+    if not t:
+        return False, f"User template <b>{VOUCHER_TEMPLATE}</b> tidak ditemukan di User Manager."
+    prof = t.get("actual-profile")
+    if not prof:
+        return False, (
+            f"User template <b>{VOUCHER_TEMPLATE}</b> <ins>belum punya profil</ins>. "
+            f"Buka Web UM <code>http://{MIKROTIK_IP}/userman/</code> → Users → pilih <b>{VOUCHER_TEMPLATE}</b> "
+            f"→ assign profil <b>Voucher_90m</b> → Save. Tanpa itu, voucher yang dibuat tidak bisa login."
+        )
+    return True, f"Template <b>{VOUCHER_TEMPLATE}</b> siap (profil <b>{prof}</b>)."
+
+
 def create_voucher(
     uptime_min: int | None = None,
     name: str | None = None,
@@ -81,26 +99,35 @@ def create_voucher(
     name = name or _generate_name()
     password = password or _generate_password()
 
+    ok, _ = template_ready()
+    if not ok:
+        raise MikroTikError(
+            f"Voucher tidak dibuat: user template <b>{VOUCHER_TEMPLATE}</b> belum punya profil. "
+            f"Assign profil <b>Voucher_90m</b> ke {VOUCHER_TEMPLATE} via Web UM "
+            f"(<code>http://{MIKROTIK_IP}/userman/</code>)."
+        )
+
     with _api() as api:
         try:
             res = api.get_resource(_UM_USER)
             if _find_by_username(res.get(), name):
                 raise MikroTikError(f"Usernama <b>{name}</b> sudah dipakai. Coba yang lain.")
-            try:
-                res.add(
-                    customer=VOUCHER_CUSTOMER,
-                    username=name,
-                    password=password,
-                    copy_from=VOUCHER_TEMPLATE,
-                )
-            except Exception:
-                res.add(customer=VOUCHER_CUSTOMER, username=name, password=password)
+            res.add(
+                customer=VOUCHER_CUSTOMER,
+                username=name,
+                password=password,
+                copy_from=VOUCHER_TEMPLATE,
+            )
             row = _find_by_username(res.get(), name)
-            if row:
-                try:
-                    res.set(**{"id": row["id"], "disabled": "no", "shared_users": "1"})
-                except Exception:
-                    pass
+            if not row or not row.get("actual-profile"):
+                raise MikroTikError(
+                    f"Klon <b>{name}</b> tidak membawa profil (template {VOUCHER_TEMPLATE} tanpa profil). "
+                    f"Assign profil dulu, lalu ulangi."
+                )
+            try:
+                res.set(**{"id": row["id"], "disabled": "no"})
+            except Exception:
+                pass
             record_voucher(name)
         except MikroTikError:
             raise
