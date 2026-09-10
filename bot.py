@@ -1,6 +1,14 @@
 import logging
 
-from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, filters
+from telegram import Update
+from telegram.ext import (
+    ApplicationBuilder,
+    CallbackQueryHandler,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
 
 from config import NEWS_POLL_INTERVAL_MINUTES, TELEGRAM_BOT_TOKEN
 from handlers.start import help_command, start_command
@@ -19,11 +27,20 @@ from scheduler.news_checker import check_new_news
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logging.warning(
+        "Unhandled telegram error: %s (update_id=%s)",
+        context.error,
+        getattr(update, "update_id", None),
+    )
+
+
 def main() -> None:
     if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "your_bot_token_here":
         raise SystemExit("⚠️ TELEGRAM_BOT_TOKEN belum diisi. Edit file .env terlebih dahulu.")
 
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    app.add_error_handler(error_handler)
 
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("help", help_command))

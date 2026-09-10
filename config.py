@@ -15,6 +15,8 @@ MIKROTIK_API_PORT = int(os.getenv("MIKROTIK_API_PORT", "8728"))
 MIKROTIK_SSH_PORT = int(os.getenv("MIKROTIK_SSH_PORT", "22"))
 VOUCHER_LIMIT_UPTIME_MIN = int(os.getenv("VOUCHER_LIMIT_UPTIME_MIN", "90"))
 VOUCHER_PREFIX = os.getenv("VOUCHER_PREFIX", "MAJ")
+VOUCHER_CUSTOMER = os.getenv("VOUCHER_CUSTOMER", "hasyim")
+VOUCHER_TEMPLATE = os.getenv("VOUCHER_TEMPLATE", "aa")
 
 ADMIN_IDS = [int(x.strip()) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip()]
 

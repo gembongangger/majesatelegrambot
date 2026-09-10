@@ -31,15 +31,17 @@ async def voucher_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         if sub == "list":
             users = list_vouchers()
             if not users:
-                await update.message.reply_text("📭 Belum ada user hotspot.")
+                await update.message.reply_text("📭 Belum ada voucher (prefix MAJ).")
                 return
-            lines = [f"📡 <b>VOUCHER HOTSPOT</b> ({len(users)})", ""]
+            lines = [f"📡 <b>VOUCHER WIFI</b> ({len(users)})", ""]
             for u in users:
                 status = "🔴 nonaktif" if u["disabled"] else "🟢 aktif"
+                prof = u["profile"] or "-"
+                seen = u["last_seen"] or "belum dipakai"
                 lines.append(
                     f"• <b>{html.escape(u['name'])}</b> — {status}\n"
-                    f"   limit: {u['limit_uptime'] or '-'} | uptime: {u['uptime'] or '-'}\n"
-                    f"   pass: {html.escape(u['comment'] or '-')}"
+                    f"   profil: {html.escape(prof)} | pakai: {html.escape(seen)}\n"
+                    f"   pass: <code>{html.escape(u['password'])}</code>"
                 )
             await update.message.reply_text("\n\n".join(lines), parse_mode="HTML", reply_markup=build_menu())
             return
