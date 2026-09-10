@@ -17,6 +17,12 @@ VOUCHER_LIMIT_UPTIME_MIN = int(os.getenv("VOUCHER_LIMIT_UPTIME_MIN", "90"))
 VOUCHER_PREFIX = os.getenv("VOUCHER_PREFIX", "MAJ")
 VOUCHER_CUSTOMER = os.getenv("VOUCHER_CUSTOMER", "hasyim")
 VOUCHER_TEMPLATE = os.getenv("VOUCHER_TEMPLATE", "aa")
+VOUCHER_NAME_MIN_LEN = int(os.getenv("VOUCHER_NAME_MIN_LEN", "3"))
+VOUCHER_NAME_MAX_LEN = int(os.getenv("VOUCHER_NAME_MAX_LEN", "20"))
+VOUCHER_NAME_PATTERN = os.getenv("VOUCHER_NAME_PATTERN", r"^[A-Za-z0-9._-]+$")
+VOUCHER_PASS_MIN_LEN = int(os.getenv("VOUCHER_PASS_MIN_LEN", "5"))
+VOUCHER_PASS_MAX_LEN = int(os.getenv("VOUCHER_PASS_MAX_LEN", "32"))
+VOUCHER_PASS_PATTERN = os.getenv("VOUCHER_PASS_PATTERN", r"^\S+$")
 
 ADMIN_IDS = [int(x.strip()) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip()]
 

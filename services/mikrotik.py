@@ -12,9 +12,16 @@ from config import (
     MIKROTIK_USER,
     VOUCHER_CUSTOMER,
     VOUCHER_LIMIT_UPTIME_MIN,
+    VOUCHER_NAME_MAX_LEN,
+    VOUCHER_NAME_MIN_LEN,
+    VOUCHER_NAME_PATTERN,
+    VOUCHER_PASS_MAX_LEN,
+    VOUCHER_PASS_MIN_LEN,
+    VOUCHER_PASS_PATTERN,
     VOUCHER_PREFIX,
     VOUCHER_TEMPLATE,
 )
+from services.voucher_registry import forget_voucher, known_vouchers, record_voucher
 
 _UM_USER = "/tool/user-manager/user"
 
@@ -65,14 +72,20 @@ def _find_by_username(users: list[dict], username: str):
     )
 
 
-def create_voucher(uptime_min: int | None = None, name: str | None = None) -> dict:
+def create_voucher(
+    uptime_min: int | None = None,
+    name: str | None = None,
+    password: str | None = None,
+) -> dict:
     uptime_min = uptime_min or VOUCHER_LIMIT_UPTIME_MIN
     name = name or _generate_name()
-    password = _generate_password()
+    password = password or _generate_password()
 
     with _api() as api:
         try:
             res = api.get_resource(_UM_USER)
+            if _find_by_username(res.get(), name):
+                raise MikroTikError(f"Usernama <b>{name}</b> sudah dipakai. Coba yang lain.")
             try:
                 res.add(
                     customer=VOUCHER_CUSTOMER,
@@ -82,12 +95,15 @@ def create_voucher(uptime_min: int | None = None, name: str | None = None) -> di
                 )
             except Exception:
                 res.add(customer=VOUCHER_CUSTOMER, username=name, password=password)
-            row = _find_by_username(api.get_resource(_UM_USER).get(), name)
+            row = _find_by_username(res.get(), name)
             if row:
                 try:
                     res.set(**{"id": row["id"], "disabled": "no", "shared_users": "1"})
                 except Exception:
                     pass
+            record_voucher(name)
+        except MikroTikError:
+            raise
         except Exception as exc:
             raise MikroTikError(f"Gagal membuat voucher: {exc}")
 
@@ -102,10 +118,15 @@ def list_vouchers() -> list[dict]:
             raise MikroTikError(f"Gagal membaca voucher: {exc}")
 
     items = []
+    known = known_vouchers()
+    known_lower = {k.lower() for k in known}
     prefix = VOUCHER_PREFIX.upper()
     for u in users:
         uname = u.get("username") or ""
-        if not uname.upper().startswith(prefix):
+        if known:
+            if uname.lower() not in known_lower:
+                continue
+        elif not uname.upper().startswith(prefix):
             continue
         items.append(
             {
@@ -147,6 +168,7 @@ def remove_voucher(name: str) -> bool:
             if not target:
                 return False
             res.remove(id=target["id"])
+            forget_voucher(name)
             return True
         except Exception as exc:
             raise MikroTikError(f"Gagal menghapus voucher: {exc}")

@@ -1,9 +1,18 @@
 import html
+import re
 
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from config import VOUCHER_LIMIT_UPTIME_MIN
+from config import (
+    VOUCHER_LIMIT_UPTIME_MIN,
+    VOUCHER_NAME_MAX_LEN,
+    VOUCHER_NAME_MIN_LEN,
+    VOUCHER_NAME_PATTERN,
+    VOUCHER_PASS_MAX_LEN,
+    VOUCHER_PASS_MIN_LEN,
+    VOUCHER_PASS_PATTERN,
+)
 from services.mikrotik import MikroTikError, create_voucher, list_vouchers, remove_voucher, set_disabled, router_name
 from services.admin_registry import is_admin
 
@@ -16,6 +25,18 @@ def _is_admin(update: Update) -> bool:
 
 def _denied() -> str:
     return "⛔ Akses ditolak. Perintah voucher hanya untuk admin."
+
+
+def _voucher_msg(v: dict) -> str:
+    uptime_display = v["limit_uptime_min"] / 60 if v["limit_uptime_min"] >= 60 else v["limit_uptime_min"]
+    unit = "jam" if v["limit_uptime_min"] >= 60 else "menit"
+    return (
+        "🎫 <b>VOUCHER BARU</b>\n\n"
+        f"Username: <code>{html.escape(v['name'])}</code>\n"
+        f"Password: <code>{html.escape(v['password'])}</code>\n\n"
+        f"⏱️ Masa aktif: {uptime_display:.0f} {unit} sejak login pertama\n\n"
+        "Cara pakai: hubungkan ke WiFi, buka browser, login di halaman hotspot dgn kredensial di atas."
+    )
 
 
 async def voucher_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -44,6 +65,31 @@ async def voucher_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                     f"   pass: <code>{html.escape(u['password'])}</code>"
                 )
             await update.message.reply_text("\n\n".join(lines), parse_mode="HTML", reply_markup=build_menu())
+            return
+
+        if sub in ("kustom", "custom", "minta"):
+            if len(args) < 4:
+                await update.message.reply_text("Gunakan: /voucher kustom <username> <password>")
+                return
+            username = args[2]
+            password = args[3]
+            if not re.fullmatch(VOUCHER_NAME_PATTERN, username) or not (
+                VOUCHER_NAME_MIN_LEN <= len(username) <= VOUCHER_NAME_MAX_LEN
+            ):
+                await update.message.reply_text(
+                    f"⚠️ Username harus {VOUCHER_NAME_MIN_LEN}-{VOUCHER_NAME_MAX_LEN} karakter, "
+                    "hanya huruf/angka dan ` . _ -` (tanpa spasi)."
+                )
+                return
+            if not re.fullmatch(VOUCHER_PASS_PATTERN, password) or not (
+                VOUCHER_PASS_MIN_LEN <= len(password) <= VOUCHER_PASS_MAX_LEN
+            ):
+                await update.message.reply_text(
+                    f"⚠️ Password harus {VOUCHER_PASS_MIN_LEN}-{VOUCHER_PASS_MAX_LEN} karakter, tanpa spasi."
+                )
+                return
+            v = create_voucher(name=username, password=password)
+            await update.message.reply_text(_voucher_msg(v), parse_mode="HTML", reply_markup=build_menu())
             return
 
         if sub in ("hapus", "remove", "del"):
@@ -79,18 +125,8 @@ async def voucher_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             )
             return
 
-        # default: buat voucher
+        # default: buat voucher (random)
         v = create_voucher()
-        uptime_display = v["limit_uptime_min"] / 60 if v["limit_uptime_min"] >= 60 else v["limit_uptime_min"]
-        unit = "jam" if v["limit_uptime_min"] >= 60 else "menit"
-        await update.message.reply_text(
-            "🎫 <b>VOUCHER BARU</b>\n\n"
-            f"Username: <code>{html.escape(v['name'])}</code>\n"
-            f"Password: <code>{html.escape(v['password'])}</code>\n\n"
-            f"⏱️ Masa aktif: {uptime_display:.0f} {unit} sejak login pertama\n\n"
-            "Cara pakai: hubungkan ke WiFi, buka browser, login di halaman hotspot dgn kredensial di atas.",
-            parse_mode="HTML",
-            reply_markup=build_menu(),
-        )
+        await update.message.reply_text(_voucher_msg(v), parse_mode="HTML", reply_markup=build_menu())
     except MikroTikError as exc:
         await update.message.reply_text(f"⚠️ {exc}")
