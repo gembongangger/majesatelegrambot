@@ -2,5 +2,6 @@
 __pycache__/
 *.pyc
 data.json
+admins.json
 bot.log
 bot.pid

@@ -3,15 +3,15 @@ import html
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from config import ADMIN_IDS, VOUCHER_LIMIT_UPTIME_MIN
+from config import VOUCHER_LIMIT_UPTIME_MIN
 from services.mikrotik import MikroTikError, create_voucher, list_vouchers, remove_voucher, set_disabled, router_name
+from services.admin_registry import is_admin
 
 from utils.menu import build_menu
 
 
 def _is_admin(update: Update) -> bool:
-    uid = update.effective_user.id
-    return uid in ADMIN_IDS
+    return is_admin(update.effective_user.id)
 
 
 def _denied() -> str:

@@ -20,6 +20,7 @@ from handlers.fasilitas import fasilitas_command
 from handlers.kontak import kontak_command
 from handlers.subscribe import subscribe_command, unsubscribe_command
 from handlers.voucher import voucher_command
+from handlers.admin import admin_command
 from handlers.callback import handle_callback
 from handlers.message import fallback_handler
 from scheduler.news_checker import check_new_news
@@ -47,6 +48,7 @@ def main() -> None:
     app.add_handler(CommandHandler("subscribe", subscribe_command))
     app.add_handler(CommandHandler("unsubscribe", unsubscribe_command))
     app.add_handler(CommandHandler("voucher", voucher_command))
+    app.add_handler(CommandHandler("admin", admin_command))
     app.add_handler(CommandHandler("berita", berita_command))
     app.add_handler(CommandHandler("ppdb", ppdb_command))
     app.add_handler(CommandHandler("profil", profil_command))
