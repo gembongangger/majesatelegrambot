@@ -7,6 +7,17 @@ load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 NEWS_POLL_INTERVAL_MINUTES = int(os.getenv("NEWS_POLL_INTERVAL_MINUTES", "30"))
 
+MIKROTIK_IP = os.getenv("MIKROTIK_IP", "")
+MIKROTIK_USER = os.getenv("MIKROTIK_USER", "")
+MIKROTIK_PASS = os.getenv("MIKROTIK_PASS", "")
+MIKROTIK_USE_SSH = os.getenv("MIKROTIK_USE_SSH", "0") == "1"
+MIKROTIK_API_PORT = int(os.getenv("MIKROTIK_API_PORT", "8728"))
+MIKROTIK_SSH_PORT = int(os.getenv("MIKROTIK_SSH_PORT", "22"))
+VOUCHER_LIMIT_UPTIME_MIN = int(os.getenv("VOUCHER_LIMIT_UPTIME_MIN", "90"))
+VOUCHER_PREFIX = os.getenv("VOUCHER_PREFIX", "MAJ")
+
+ADMIN_IDS = [int(x.strip()) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip()]
+
 API_BASE = "https://man1jember.sch.id/wp-json/wp/v2"
 API_FIELDS_POST = "id,title,date,link,excerpt"
 API_FIELDS_PAGE = "id,title,link,content"
