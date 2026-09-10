@@ -1,4 +1,5 @@
 import logging
+import time
 
 from telegram import Update
 from telegram.ext import (
@@ -26,6 +27,7 @@ from handlers.message import fallback_handler
 from scheduler.news_checker import check_new_news
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -34,6 +36,28 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         context.error,
         getattr(update, "update_id", None),
     )
+
+
+def _reschedule_voucher_expiry(job_queue) -> None:
+    from services.voucher_registry import _entries
+    from handlers.voucher import _expire_voucher_job
+
+    now = time.time()
+    for entry in _entries():
+        name = entry["name"]
+        expires_at = entry.get("expires_at")
+        if expires_at is None:
+            continue
+        delay = expires_at - now
+        if delay <= 0:
+            continue
+        job_queue.run_once(
+            _expire_voucher_job,
+            when=delay,
+            data={"name": name, "chat_id": None},
+            name=f"voucher_expire_{name.lower()}",
+        )
+        logger.info("Rescheduled expiry for voucher %s in %.0fs", name, delay)
 
 
 def main() -> None:
@@ -62,6 +86,7 @@ def main() -> None:
     job_queue = app.job_queue
     if job_queue is not None:
         job_queue.run_repeating(check_new_news, interval=NEWS_POLL_INTERVAL_MINUTES * 60, first=60)
+        _reschedule_voucher_expiry(job_queue)
 
     logging.info("Bot MAN 1 Jember berjalan... (tekan Ctrl+C untuk berhenti)")
     app.run_polling()

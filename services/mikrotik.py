@@ -21,7 +21,11 @@ from config import (
     VOUCHER_PREFIX,
     VOUCHER_TEMPLATE,
 )
-from services.voucher_registry import forget_voucher, known_vouchers, record_voucher
+from services.voucher_registry import (
+    forget_voucher,
+    known_vouchers,
+    record_voucher,
+)
 
 _UM_USER = "/tool/user-manager/user"
 
@@ -107,6 +111,10 @@ def create_voucher(
             f"(<code>http://{MIKROTIK_IP}/userman/</code>)."
         )
 
+    import time
+
+    expires_at = time.time() + uptime_min * 60
+
     with _api() as api:
         try:
             res = api.get_resource(_UM_USER)
@@ -128,13 +136,13 @@ def create_voucher(
                 res.set(**{"id": row["id"], "disabled": "no"})
             except Exception:
                 pass
-            record_voucher(name)
+            record_voucher(name, expires_at=expires_at)
         except MikroTikError:
             raise
         except Exception as exc:
             raise MikroTikError(f"Gagal membuat voucher: {exc}")
 
-    return {"name": name, "password": password, "limit_uptime_min": uptime_min}
+    return {"name": name, "password": password, "limit_uptime_min": uptime_min, "expires_at": expires_at}
 
 
 def list_vouchers() -> list[dict]:
@@ -199,6 +207,11 @@ def remove_voucher(name: str) -> bool:
             return True
         except Exception as exc:
             raise MikroTikError(f"Gagal menghapus voucher: {exc}")
+
+
+def is_voucher_known(name: str) -> bool:
+    uname = name.lower()
+    return any(v.lower() == uname for v in known_vouchers())
 
 
 def router_name() -> str:

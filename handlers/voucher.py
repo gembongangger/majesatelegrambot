@@ -1,4 +1,5 @@
 import html
+import logging
 import re
 
 from telegram import Update
@@ -26,6 +27,8 @@ from services.admin_registry import is_admin
 
 from utils.menu import build_menu
 
+logger = logging.getLogger(__name__)
+
 
 def _is_admin(update: Update) -> bool:
     return is_admin(update.effective_user.id)
@@ -33,6 +36,40 @@ def _is_admin(update: Update) -> bool:
 
 def _denied() -> str:
     return "⛔ Akses ditolak. Perintah voucher hanya untuk admin."
+
+
+def _schedule_expiry(context: ContextTypes.DEFAULT_TYPE, name: str, expires_at: float, chat_id: int) -> None:
+    import time
+
+    delay = max(expires_at - time.time(), 1)
+    context.job_queue.run_once(
+        _expire_voucher_job,
+        when=delay,
+        data={"name": name, "chat_id": chat_id},
+        name=f"voucher_expire_{name.lower()}",
+    )
+
+
+async def _expire_voucher_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    data = context.job.data or {}
+    name = data.get("name", "")
+    chat_id = data.get("chat_id")
+    if not name:
+        return
+    try:
+        from services.mikrotik import is_voucher_known
+
+        if not is_voucher_known(name):
+            return
+        ok = remove_voucher(name)
+        if ok and chat_id:
+            await context.bot.send_message(
+                chat_id,
+                f"🗑️ Voucher <b>{html.escape(name)}</b> telah expired dan dihapus otomatis.",
+                parse_mode="HTML",
+            )
+    except Exception as exc:
+        logger.warning("Gagal menghapus voucher %s: %s", name, exc)
 
 
 def _voucher_msg(v: dict) -> str:
@@ -113,6 +150,7 @@ async def voucher_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 )
                 return
             v = create_voucher(name=username, password=password)
+            _schedule_expiry(context, v["name"], v["expires_at"], update.effective_chat.id)
             await update.message.reply_text(_voucher_msg(v), parse_mode="HTML", reply_markup=build_menu())
             return
 
@@ -151,6 +189,7 @@ async def voucher_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
         # default: buat voucher (random)
         v = create_voucher()
+        _schedule_expiry(context, v["name"], v["expires_at"], update.effective_chat.id)
         await update.message.reply_text(_voucher_msg(v), parse_mode="HTML", reply_markup=build_menu())
     except MikroTikError as exc:
         await update.message.reply_text(f"⚠️ {exc}")
