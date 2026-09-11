@@ -17,6 +17,7 @@ HELP_TEXT = (
     "• /subscribe - Aktifkan notifikasi berita baru\n"
     "• /unsubscribe - Nonaktifkan notifikasi\n"
     "• /voucher - Buat voucher WiFi hotspot (khusus admin)\n"
+    "• /id - Lihat ID Telegram Anda (untuk ditambahkan sebagai admin)\n"
     "• /help - Bantuan ini\n\n"
     "Silakan pilih menu di bawah ini 👇"
 )

@@ -26,6 +26,19 @@ def _target(update: Update, cmd_arg: str | None):
     return None
 
 
+async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    if not user:
+        return
+    name = html.escape(user.full_name or user.username or str(user.id))
+    await update.message.reply_text(
+        f"ℹ️ <b>{name}</b>\n\n"
+        f"ID Telegram Anda: <code>{user.id}</code>\n\n"
+        "Gunakan ID ini untuk keperluan administrasi (mis. ditambahkan sebagai admin).",
+        parse_mode="HTML",
+    )
+
+
 async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     caller = update.effective_user
     if not caller or not is_admin(caller.id):
