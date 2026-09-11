@@ -1,9 +1,13 @@
 import html
+import logging
 
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from config import ADMIN_IDS
 from services.admin_registry import add_admin, is_admin, is_master, list_admins, remove_admin
+
+logger = logging.getLogger(__name__)
 
 
 def _denied() -> str:
@@ -26,6 +30,29 @@ def _target(update: Update, cmd_arg: str | None):
     return None
 
 
+async def _notify_owners(update: Update, context: ContextTypes.DEFAULT_TYPE, uid: int, name: str) -> None:
+    """Forward pesan /id user dan kirim nama+ID ke semua owner di ADMIN_IDS."""
+    if not ADMIN_IDS or uid in ADMIN_IDS:
+        return
+    message = update.message
+    text = (
+        f"🔔 <b>{name}</b> menjalankan /id.\n"
+        f"ID: <code>{uid}</code>\n"
+        f"Profil: <a href=\"tg://user?id={uid}\">{name}</a>"
+    )
+    for owner_id in ADMIN_IDS:
+        try:
+            if message is not None:
+                await context.bot.forward_message(
+                    chat_id=owner_id,
+                    from_chat_id=message.chat_id,
+                    message_id=message.message_id,
+                )
+            await context.bot.send_message(owner_id, text, parse_mode="HTML")
+        except Exception as exc:  # mis. 403 karena owner belum /start bot
+            logger.warning("Gagal notifikasi /id ke %s: %s", owner_id, exc)
+
+
 async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not user:
@@ -37,6 +64,7 @@ async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         "Gunakan ID ini untuk keperluan administrasi (mis. ditambahkan sebagai admin).",
         parse_mode="HTML",
     )
+    await _notify_owners(update, context, user.id, name)
 
 
 async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
